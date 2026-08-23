@@ -11,29 +11,33 @@ export function useNotificationPolling() {
     setPolling,
     setLastPollTimestamp,
     isPanelOpen,
-    lastPollTimestamp,
   } = useNotificationStore();
+  // Use a ref to the latest 'info' function so we don't cause the effect to re-run
+  // when the toast helpers change identity
   const { info } = useToast();
+  const infoRef = useRef(info);
+  infoRef.current = info;
+
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastProcessedPostId = useRef<number | null>(null);
 
   useEffect(() => {
     const startPolling = () => {
       setPolling(true);
-      
+
       pollingIntervalRef.current = setInterval(async () => {
         try {
           const response = await fetch(API_URL);
           if (!response.ok) return;
-          
+
           const posts = await response.json();
           const latestPostId = posts[0]?.id;
-          
+
           if (latestPostId && lastProcessedPostId.current !== null) {
             // If we have a new post ID, treat it as a new notification
             if (latestPostId > lastProcessedPostId.current) {
               const newPost = posts.find((p: any) => p.id === latestPostId);
-              
+
               if (newPost) {
                 addNotification({
                   title: 'New Update',
@@ -44,13 +48,13 @@ export function useNotificationPolling() {
                 });
 
                 // Show toast if panel is closed
-                if (!isPanelOpen) {
-                  info('New notification received', newPost.title.substring(0, 30) + '...');
+                if (!isPanelOpen && infoRef.current) {
+                  infoRef.current('New notification received', newPost.title.substring(0, 30) + '...');
                 }
               }
             }
           }
-          
+
           lastProcessedPostId.current = latestPostId;
           setLastPollTimestamp(Date.now());
         } catch (error) {
@@ -86,10 +90,8 @@ export function useNotificationPolling() {
       stopPolling();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [addNotification, setPolling, setLastPollTimestamp, isPanelOpen, info]);
+  }, [addNotification, setPolling, setLastPollTimestamp, isPanelOpen]);
 
-  return {
-    isPolling: useNotificationStore((state) => state.isPolling),
-    lastPollTimestamp,
-  };
+  // Do not subscribe to store selectors here — the hook is intended to run as a daemon.
+  return;
 }
