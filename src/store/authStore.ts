@@ -57,8 +57,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
     
     try {
-      // Prepare payload matching common auth APIs (DummyJSON expects username and password)
-      const payload: Record<string, any> = { username, password };
+      // Prepare payload matching common auth APIs
+      // If the user entered an email (contains '@') send { email, password }, else send { username, password }
+      const payload: Record<string, any> = /@/.test(String(username))
+        ? { email: username, password }
+        : { username, password };
 
       const response = await fetch('https://dummyjson.com/auth/login', {
         method: 'POST',
