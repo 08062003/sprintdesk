@@ -57,11 +57,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
     
     try {
-      // Prepare payload matching common auth APIs
-      // If the user entered an email (contains '@') send { email, password }, else send { username, password }
-      const payload: Record<string, any> = /@/.test(String(username))
-        ? { email: username, password }
-        : { username, password };
+      // DummyJSON expects { username, password, expiresInMins }
+      const payload = { username, password, expiresInMins: 30 };
 
       const response = await fetch('https://dummyjson.com/auth/login', {
         method: 'POST',
