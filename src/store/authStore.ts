@@ -87,6 +87,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const accessToken = data.accessToken || data.token || data.authToken || null;
       const refreshToken = data.refreshToken || null;
 
+      // If no access token returned, treat as authentication failure
+      if (!accessToken) {
+        // clear any stored refresh token
+        simulatedLocalStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+        simulatedLocalStorage.removeItem(STORAGE_KEYS.REMEMBER_ME);
+        set({ isLoading: false });
+        throw new Error('Access token not returned from auth server');
+      }
+
       // Store refresh token in simulated local storage if remember me is checked
       if (rememberMe && refreshToken) {
         simulatedLocalStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
@@ -99,6 +108,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Normalize user object: some APIs return user inside data.user
       const user = data.user || data;
 
+      // Persist tokens synchronously and update state
       set({
         isAuthenticated: true,
         user,
